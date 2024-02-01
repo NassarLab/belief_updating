@@ -1,0 +1,59 @@
+Principal Component 1:
+Question 133 (0.185): <b>People often tell falsehoods unintentionally.
+Question 37 (0.178): <b>Every now and then, a new experience will unsettle beliefs I?ve had for a while.
+Question 106 (0.163): <b>Having some conflicting beliefs is inevitable.
+Question 61 (0.156): <b>It?s difficult to not have at least some conflicting beliefs.
+Question 121 (0.155): <b>There are some topics I?ve been really wrong about.
+
+Being aware of cognitive dissonance - Going on with life knowing that he/she is lost
+
+
+Principal Component 2:
+Question 86 (0.215): <b>I form my political views only after meticulously gathering historical and present information about their policies.
+Question 62 (0.201): <b>When I learn new things, I think deeply about how my opinions should change.
+Question 63 (0.182): <b>I think a lot about how to interpret different sorts of evidence.
+Question 83 (0.181): <b>I try to remain skeptical about most topics.
+Question 146 (0.176): <b>Specific policies are often very important to me.
+
+Critical thinking - careful and skeptical construction of belief
+
+
+Principal Component 3:
+Question 3 (0.220): <b>Most people just believe whatever is convenient for them.
+Question 107 (0.208): <b>People are wrong because they haven?t thought much about things.
+Question 134 (0.183): <b>Most people don?t know much about most things.
+Question 91 (0.175): <b>People?s brains turn off when they talk about politics.
+Question 108 (0.175): <b>People tend to believe whatever is good for their friends.
+
+Construct belief out of convenience - he/she seems to have no faith in humanity
+
+
+Principal Component 4:
+Question 123 (0.217): <b>Other people make life out to be more complicated than it really is.
+Question 22 (0.212): <b>When I talk to others, I often worry I?ll convince them of something I didn?t mean to.
+Question 28 (0.187): <b>If a politician in my political party supports something I disagree with, I give them the benefit of the doubt, as such issues often involve hidden complexities that aren?t obvious.   
+Question 147 (-0.187): <b>Most people are woefully under-informed.
+Question 41 (0.177): <b>In politics, it?s important to trust your friends and family.
+
+Over-thinker - Seems like this person make life out to be more complicated than it really is
+
+
+Principal Component 5:
+Question 10 (0.223): <b>Figuring out what?s important in life requires learning a lot of facts.
+Question 118 (0.209): <b>I would need to be totally wowed if I were to change my opinion of a restaurant I don?t like.
+Question 27 (-0.205): <b>I change my mind about specific policies pretty frequently.
+Question 143 (0.198): <b>I would need to learn a lot about a person for my opinion of them to be swayed.
+Question 23 (0.195): <b>I would need to learn something utterly shocking about my party in order to change my political views.
+
+Rigidity of view points - unlikely to change his/her view point
+
+
+Principal Component 6:
+Question 144 (0.224): <b>People can?t usually trick me when it comes to topics I care about.
+Question 73 (0.194): <b>I easily apply what I learn in one situation to another.
+Question 104 (-0.190): <b>When people tell me important things about the world, I usually believe them.
+Question 10 (-0.175): <b>Figuring out what?s important in life requires learning a lot of facts.
+Question 44 (-0.175): <b>Listening to people I disagree with makes my opinions better.
+
+This person seems to be very confident in his/herself
+
