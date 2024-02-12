@@ -294,90 +294,207 @@ qNum = 120;
 fprintf('Rankings for Question %d: Variance: %d, Mean: %d, Median: %d, Response Count: %d\n', ...
     qNum, find(rankVariances == qNum), find(rankMeans == qNum), find(rankMedians == qNum), find(rankResponseCounts == qNum));
 
-
 % Assuming 'questions' variable contains question texts
 cleanedQuestions = strrep(questions, '<b>', ''); % Remove "<b>" from questions
 [sortedVariances, sortedIdxVariances] = sort(variances, 'descend');
 
-figure;
-plot(sort(variances, 'descend'));
-hold on;
-plot(means(sortedIdxVariances));
+%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% Graph %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%
+% figure;
+% plot(sort(variances, 'descend'));
+% hold on;
+% plot(means(sortedIdxVariances));
+% 
+% title('Variance of Responses for Each Question');
+% xlabel('Question Number');
+% ylabel('Variance');
+% set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions); % Use cleaned questions as x-axis labels
+% xtickangle(45); % Rotate labels for better readability
+% set(gca, 'FontSize', 8); % Adjust font size here
+% grid on;
+% 
+% % Highlighting the top N questions with highest variance
+% [sortedVariances, sortedIdxVariances] = sort(variances, 'descend');
+% hold on;
+% bar(sortedIdxVariances(1:5), sortedVariances(1:5), 'r');
+% legend('All Questions', 'Top 5 Variances');
+% hold off;
+% 
+% 
+% % Highlighting the top N questions with highest variance
+% [sortedVariances, sortedIdxVariances] = sort(variances, 'descend');
+% hold on;
+% bar(sortedIdxVariances(1:5), sortedVariances(1:5), 'r');
+% legend('All Questions', 'Top 5 Variances');
+% hold off;
+% 
+% % Mean
+% figure;
+% bar(means);
+% title('Mean of Responses for Each Question');
+% xlabel('Question Number');
+% ylabel('Mean');
+% set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions);
+% xtickangle(45);
+% grid on;
+% 
+% % Highlighting the top N questions with highest mean
+% [sortedMeans, sortedIdxMeans] = sort(means, 'descend');
+% hold on;
+% bar(sortedIdxMeans(1:5), sortedMeans(1:5), 'r');
+% legend('All Questions', 'Top 5 Means');
+% hold off;
+% 
+% % Median
+% figure;
+% bar(medians);
+% title('Median of Responses for Each Question');
+% xlabel('Question Number');
+% ylabel('Median');
+% set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions);
+% xtickangle(45);
+% grid on;
+% 
+% % Highlighting the top N questions with highest median
+% [sortedMedians, sortedIdxMedians] = sort(medians, 'descend');
+% hold on;
+% bar(sortedIdxMedians(1:5), sortedMedians(1:5), 'r');
+% legend('All Questions', 'Top 5 Medians');
+% hold off;
+% 
+% 
+% % Response count
+% figure;
+% bar(responseCounts);
+% title('Number of Responses for Each Question');
+% xlabel('Question Number');
+% ylabel('Response Count');
+% set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions);
+% xtickangle(45);
+% grid on;
+% 
+% % Highlighting the questions with highest response counts
+% [sortedCounts, sortedIdxCounts] = sort(responseCounts, 'descend');
+% hold on;
+% bar(sortedIdxCounts(1:5), sortedCounts(1:5), 'r');
+% legend('All Questions', 'Top 5 Response Counts');
+% hold off;
 
-title('Variance of Responses for Each Question');
-xlabel('Question Number');
-ylabel('Variance');
-set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions); % Use cleaned questions as x-axis labels
-xtickangle(45); % Rotate labels for better readability
-set(gca, 'FontSize', 8); % Adjust font size here
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% bottom 20% %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Assuming variances, means, and medians are already calculated as shown above
+numQuestions = size(allData, 2); % Total number of questions
+bottomPercentCount = ceil(numQuestions * 0.5); % Number of questions in the bottom %
+
+% Sort variances to find the bottom 10%
+[sortedVariances, sortIndex] = sort(variances, 'ascend');
+bottomPercentIndex = sortIndex(1:bottomPercentCount);
+
+% Extract statistics for the bottom 10%
+bottomVariances = variances(bottomPercentIndex);
+bottomMeans = means(bottomPercentIndex);
+bottomMedians = medians(bottomPercentIndex);
+
+% Plotting
+figure;
+hold on;
+plot(1:bottomPercentCount, bottomVariances, 'b-o', 'LineWidth', 2, 'DisplayName', 'Variance');
+plot(1:bottomPercentCount, bottomMeans, 'r-*', 'LineWidth', 2, 'DisplayName', 'Mean');
+plot(1:bottomPercentCount, bottomMedians, 'g-s', 'LineWidth', 2, 'DisplayName', 'Median');
+hold off;
+
+% Enhance the plot
+title('Bottom 20% Questions by Variance: Variance, Mean, and Median Responses');
+xlabel('Question Index');
+ylabel('Value');
+legend('show');
 grid on;
 
-% Highlighting the top N questions with highest variance
-[sortedVariances, sortedIdxVariances] = sort(variances, 'descend');
-hold on;
-bar(sortedIdxVariances(1:5), sortedVariances(1:5), 'r');
-legend('All Questions', 'Top 5 Variances');
-hold off;
-
-
-% Highlighting the top N questions with highest variance
-[sortedVariances, sortedIdxVariances] = sort(variances, 'descend');
-hold on;
-bar(sortedIdxVariances(1:5), sortedVariances(1:5), 'r');
-legend('All Questions', 'Top 5 Variances');
-hold off;
-
-% Mean
-figure;
-bar(means);
-title('Mean of Responses for Each Question');
-xlabel('Question Number');
-ylabel('Mean');
-set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions);
+% Adjust the x-ticks to reflect the actual question numbers
+xticks(1:bottomPercentCount);
+xticklabels(arrayfun(@(x) sprintf('Q%d', x), bottomPercentIndex, 'UniformOutput', false));
 xtickangle(45);
-grid on;
 
-% Highlighting the top N questions with highest mean
-[sortedMeans, sortedIdxMeans] = sort(means, 'descend');
-hold on;
-bar(sortedIdxMeans(1:5), sortedMeans(1:5), 'r');
-legend('All Questions', 'Top 5 Means');
-hold off;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% by construct %%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define question numbers for each construct
+constructs = struct(...
+    'Nuance', [17, 27, 47, 79, 94, 101, 111, 124, 132, 141], ...
+    'FalseBeliefs', [7, 12, 119, 23, 34, 40, 49, 73, 81, 86, 91, 98, 101, 103, 109, 120, 124, 128, 136, 139, 142, 145, 147], ...
+    'Evidence', [1, 16, 22, 26, 33, 37, 45, 52, 54, 58, 64, 72, 76, 79, 82, 85, 89, 94, 97, 100, 104, 106, 111, 117, 119, 125, 131, 133, 137, 141, 144, 150], ...
+    'ConflictingBeliefs', [3, 21, 32, 36, 43, 57, 62, 68, 87, 108, 123], ...
+    'Politics', [4, 6, 9, 13, 27, 29, 38, 41, 45, 50, 55, 64, 65, 69, 76, 81, 91, 108, 111, 113, 115, 119, 126, 146], ...
+    'MoralsAndTruth', [2, 10, 49, 60, 68, 75, 97], ...
+    'ReasoningStyles', [8, 14, 24, 30, 37, 43, 54, 59, 62, 73]);
+% 'AttentionCheck', [22, 71, 115], ...
+constructNames = fieldnames(constructs);
+constructStats = struct();
 
-% Median
-figure;
-bar(medians);
-title('Median of Responses for Each Question');
-xlabel('Question Number');
-ylabel('Median');
-set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions);
-xtickangle(45);
-grid on;
+% Loop through each construct
+% Loop through each construct
+% Loop through each construct
+for c = 1:length(constructNames)
+    construct = constructNames{c};
+    questionIndices = constructs.(construct);
 
-% Highlighting the top N questions with highest median
-[sortedMedians, sortedIdxMedians] = sort(medians, 'descend');
-hold on;
-bar(sortedIdxMedians(1:5), sortedMedians(1:5), 'r');
-legend('All Questions', 'Top 5 Medians');
-hold off;
+    % Ensure questionIndices are sorted in ascending order for processing
+    questionIndices = sort(questionIndices(questionIndices <= size(allData, 2)));
+
+    % Skip if no valid questions
+    if isempty(questionIndices)
+        continue;
+    end
+
+    % Initialize arrays to store statistics for each question in the construct
+    questionVariances = zeros(1, length(questionIndices));
+    questionMeans = zeros(1, length(questionIndices));
+    questionMedians = zeros(1, length(questionIndices));
+
+    % Calculate statistics for each question
+    for q = 1:length(questionIndices)
+        qIndex = questionIndices(q);
+        questionData = allData(:, qIndex);
+
+        questionVariances(q) = var(questionData, 'omitnan');
+        questionMeans(q) = mean(questionData, 'omitnan');
+        questionMedians(q) = median(questionData, 'omitnan');
+    end
+
+    % Sort the questions by variance in descending order
+    [sortedVariances, sortIndices] = sort(questionVariances, 'descend');
+    sortedQuestionIndices = questionIndices(sortIndices);
+    sortedQuestionMeans = questionMeans(sortIndices);
+    sortedQuestionMedians = questionMedians(sortIndices);
+
+    % Plotting the statistics for the current construct in sorted order
+    figure; % Create a new figure for each construct
+    hold on;
+
+    % Plot each statistic using the sorted order
+    plot(1:length(sortedQuestionIndices), sortedVariances, 'b-o', 'LineWidth', 2, 'DisplayName', 'Variance');
+    plot(1:length(sortedQuestionIndices), sortedQuestionMeans, 'r-*', 'LineWidth', 2, 'DisplayName', 'Mean');
+    plot(1:length(sortedQuestionIndices), sortedQuestionMedians, 'g-s', 'LineWidth', 2, 'DisplayName', 'Median');
+
+    hold off;
+    title(['Questions in Construct: ', construct]);
+    xlabel('Sorted Question Index');
+    ylabel('Statistic Value');
+    legend('show');
+    grid on;
+
+    % Adjust the x-ticks to reflect the sorted question indices and use custom labels
+    xticks(1:length(sortedQuestionIndices));
+    xticklabels(arrayfun(@(x) strcat('Q', num2str(x)), sortedQuestionIndices, 'UniformOutput', false));
+    xtickangle(45);
+end
 
 
-% Response count
-figure;
-bar(responseCounts);
-title('Number of Responses for Each Question');
-xlabel('Question Number');
-ylabel('Response Count');
-set(gca, 'XTick', 1:length(cleanedQuestions), 'XTickLabel', cleanedQuestions);
-xtickangle(45);
-grid on;
 
-% Highlighting the questions with highest response counts
-[sortedCounts, sortedIdxCounts] = sort(responseCounts, 'descend');
-hold on;
-bar(sortedIdxCounts(1:5), sortedCounts(1:5), 'r');
-legend('All Questions', 'Top 5 Response Counts');
-hold off;
+
+
 
 
 

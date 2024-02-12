@@ -116,93 +116,230 @@ end
 % Perform PCA on the correlation matrix
 [coeff, score, latent, ~, VarExplained] = pca(zscore(allData), 'Centered', false);
 
+% Assuming `coeff` and `allData` are already defined from PCA
+numPCs = 8; % Number of principal components to consider
+numTopQuestions = 10; % Top questions per PC
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%% Response CDF %%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Plot CDFs for Each Question with Key Statistics
-numQuestions = size(allData, 2); % Assuming allData has participants as rows and questions as columns
+% Initialize a matrix to hold the indices of the top questions for each PC
+topQuestionsPC = zeros(numTopQuestions, numPCs);
+topQuestionsOrder = []; % This will hold the ordered question indices as per PCs
 
-% Adjust these values based on your preference and number of questions
-histSubplotsPerRow = 5;
-histSubplotsPerCol = 5;
-totalHistSubplots = histSubplotsPerRow * histSubplotsPerCol;
+for pc = 1:numPCs
+    [~, sortedIndices] = sort(abs(coeff(:, pc)), 'descend');
+    topQuestionsPC(:, pc) = sortedIndices(1:numTopQuestions);
+    topQuestionsOrder = [topQuestionsOrder; sortedIndices(1:numTopQuestions)]; % Append in order
+end
 
-numHistFigures = ceil(numQuestions / totalHistSubplots);
+% Extract the data for these top questions in the PC-wise order
+selectedData = zscore(allData(:, topQuestionsOrder));
 
-for fig = 1:numHistFigures
-    figure('Position', [100, 400, 1700, 1000]);
-    for subPlotNum = 1:totalHistSubplots
-        questionNum = (fig - 1) * totalHistSubplots + subPlotNum;
-        if questionNum > numQuestions
-            break;
-        end
-        subplot(histSubplotsPerRow, histSubplotsPerCol, subPlotNum);
-        histogram(allData(:, questionNum), 'Normalization', 'probability', 'DisplayName', 'Histogram');
-        hold on;
-        [f, x] = ecdf(allData(:, questionNum));
-        plot(x, f, 'r-', 'LineWidth', 2, 'DisplayName', 'CDF');
-        hold off;
-        legend;
-        title(['Histogram/CDF for Q' num2str(questionNum)]);
-        xlabel('Response');
-        ylabel('Frequency / Cumulative Probability');
+% Calculate the correlation matrix for the selected questions in the order
+corrMatrixSelected = corr(selectedData);
 
-        % Key statistics
-        medianVal = median(allData(:, questionNum));
-        percentile25 = prctile(allData(:, questionNum), 25);
-        percentile75 = prctile(allData(:, questionNum), 75);
+% Visualize the correlation matrix
+figure;
+imagesc(corrMatrixSelected);
+colorbar;
+title('Correlation Matrix of Top 6 Questions for Each PC, Sorted by PC');
+colormap jet;
+axis square;
+
+% Set the tick labels to reflect the PC and question order
+xticks(1:length(topQuestionsOrder));
+yticks(1:length(topQuestionsOrder));
+xticklabels(arrayfun(@(x) ['Q', num2str(x)], topQuestionsOrder, 'UniformOutput', false));
+yticklabels(arrayfun(@(x) ['Q', num2str(x)], topQuestionsOrder, 'UniformOutput', false));
+xtickangle(45);
+
+% Improve readability by adding grid lines to separate PCs
+hold on;
+for pc = 1:numPCs-1
+    line([pc*numTopQuestions+0.5, pc*numTopQuestions+0.5], ylim, 'Color', 'w', 'LineWidth', 2);
+    line(xlim, [pc*numTopQuestions+0.5, pc*numTopQuestions+0.5], 'Color', 'w', 'LineWidth', 2);
+end
+hold off;
+
+% Adjust the interpreter for tick labels if needed
+set(gca, 'TickLabelInterpreter', 'none');
+
+
+% Initialize variables to hold average correlations
+avgCorrWithinPCs = zeros(1, numPCs);
+avgCorrBetweenPCs = zeros(numPCs, numPCs); % This will be a symmetric matrix
+
+% Calculate average correlation within PCs
+for pc = 1:numPCs
+    startIndex = (pc-1) * numTopQuestions + 1;
+    endIndex = pc * numTopQuestions;
+    pcBlock = corrMatrixSelected(startIndex:endIndex, startIndex:endIndex);
+    
+    % Exclude the diagonal (self-correlation) when calculating the average
+    avgCorrWithinPCs(pc) = abs(mean(pcBlock(triu(true(size(pcBlock)), 1)), 'all'));
+end
+
+% Calculate average correlation between PCs
+for pc1 = 1:numPCs
+    for pc2 = pc1+1:numPCs % Only need to calculate for one half due to symmetry
+        startIdx1 = (pc1-1) * numTopQuestions + 1;
+        endIdx1 = pc1 * numTopQuestions;
+        startIdx2 = (pc2-1) * numTopQuestions + 1;
+        endIdx2 = pc2 * numTopQuestions;
         
-        % Marking statistics on the plot
-        hold on;
-        xline(medianVal, '--r', 'Median');
-        xline(percentile25, ':g', '25th Percentile');
-        xline(percentile75, ':b', '75th Percentile');
-        hold off;
+        % Extract the correlation block between pc1 and pc2
+        betweenBlock = corrMatrixSelected(startIdx1:endIdx1, startIdx2:endIdx2);
         
-        title(['CDF for Q' num2str(questionNum)]);
-        xlabel('Response');
-        ylabel('Cumulative Probability');
-        grid on;
+        % Calculate and store the average correlation
+        avgCorrBetweenPCs(pc1, pc2) = mean(betweenBlock, 'all');
+        avgCorrBetweenPCs(pc2, pc1) = avgCorrBetweenPCs(pc1, pc2); % Mirror due to symmetry
     end
 end
 
-%% Calculate Key Statistics for Each Question
-numQuestions = size(allData, 2);
-medians = zeros(numQuestions, 1);
-percentile25s = zeros(numQuestions, 1);
-percentile75s = zeros(numQuestions, 1);
-minVals = zeros(numQuestions, 1);
-maxVals = zeros(numQuestions, 1);
-skewnessVals = zeros(numQuestions, 1);
+% Display the results
+disp('Average correlation within PCs:');
+disp(avgCorrWithinPCs);
 
 
-for i = 1:numQuestions
-    medians(i) = median(allData(:, i));
-    percentile25s(i) = prctile(allData(:, i), 25);
-    percentile75s(i) = prctile(allData(:, i), 75);
-    minVals(i) = min(allData(:, i));
-    maxVals(i) = max(allData(:, i));
-    skewnessVals(i) = skewness(allData(:, i));
+%%%%%%% Graph 2 %%%%%%%%
+% Initialize variables for the absolute correlations
+minAbsBetweenPCs = zeros(1, numPCs);
+maxAbsBetweenPCs = zeros(1, numPCs);
+meanAbsBetweenPCs = zeros(1, numPCs);
+
+% Calculate the minimum, maximum, and mean of the absolute correlations
+for pc = 1:numPCs
+    betweenCorrs = abs(avgCorrBetweenPCs(pc, :)); % Take absolute values
+    betweenCorrs(pc) = []; % Remove self-comparison
+    minAbsBetweenPCs(pc) = min(betweenCorrs);
+    maxAbsBetweenPCs(pc) = max(betweenCorrs);
+    meanAbsBetweenPCs(pc) = mean(betweenCorrs);
 end
 
-questions = data.Question;
+% Visualization with average absolute correlations
+figure;
+scatter(1:numPCs, avgCorrWithinPCs, 100, 'Filled', 'DisplayName', 'Avg Within-PC Correlation', 'MarkerEdgeColor', 'b', 'MarkerFaceColor', [0 0.5 0.5]);
+hold on;
 
-%% Print Questions with Skewness Higher than 0.5 or Lower than -0.5
-highSkewnessQuestions = find(skewnessVals > 0.5);
-lowSkewnessQuestions = find(skewnessVals < -0.5);
-
-fprintf('Questions with skewness higher than 0.5:\n');
-for i = 1:length(highSkewnessQuestions)
-    qNum = highSkewnessQuestions(i);
-    fprintf('Question %d (%.2f): %s\n', qNum, skewnessVals(qNum), questions{qNum});
+% Plot lines to show the range of absolute between-PC correlations for each PC
+for pc = 1:numPCs
+    line([pc, pc], [minAbsBetweenPCs(pc), maxAbsBetweenPCs(pc)], 'Color', 'k', 'LineWidth', 2, 'HandleVisibility', 'off');
 end
 
-fprintf('\nQuestions with skewness lower than -0.5:\n');
-for i = 1:length(lowSkewnessQuestions)
-    qNum = lowSkewnessQuestions(i);
-    fprintf('Question %d (%.2f): %s\n', qNum, skewnessVals(qNum), questions{qNum});
-end
+% Add error bars to show the range of absolute between-PC correlations (from min to max)
+errorbar(1:numPCs, meanAbsBetweenPCs, minAbsBetweenPCs - meanAbsBetweenPCs, maxAbsBetweenPCs - meanAbsBetweenPCs, 'k', 'linestyle', 'none', 'DisplayName', 'Absolute Between-PC Range');
+
+% Optionally, plot the mean absolute between-PC correlations as a separate line or markers
+plot(1:numPCs, meanAbsBetweenPCs, 'r-o', 'LineWidth', 2, 'MarkerSize', 8, 'DisplayName', 'Mean Absolute Between-PC');
+
+hold off;
+title('Comparison of Correlation Within and Between PCs (Absolute Values)');
+xlabel('Principal Component (PC)');
+ylabel('Average Absolute Correlation');
+legend('Location', 'Best');
+set(gca, 'XTick', 1:numPCs, 'XTickLabel', arrayfun(@(x) ['PC', num2str(x)], 1:numPCs, 'UniformOutput', false));
+
+% % Parameters for customization
+% numPCs = 10; % Number of principal components to analyze
+% numScores = 10; % Number of top scores to select based on magnitude
+% 
+% % Extract scores for the specified number of PCs
+% scoresPCs = score(:, 1:numPCs);
+% 
+% % Initialize matrix to hold indices and scores of top elements
+% topIndices = zeros(numScores, numPCs); % Indices of top scores
+% topScoresPCs = zeros(numScores, numPCs); % Top scores for each PC
+% 
+% % Select the top elements
+% for i = 1:numPCs
+%     [~, sortedIndices] = sort(abs(scoresPCs(:, i)), 'descend');
+%     topIndices(:, i) = sortedIndices(1:numScores);
+%     topScoresPCs(:, i) = scoresPCs(topIndices(:, i), i);
+% end
+% 
+% % Calculate the correlation matrix among the top scores of the specified PCs
+% corrMatrixTopScores = corr(topScoresPCs);
+% 
+% % Display the correlation matrix in the console
+% disp(['Correlation matrix among the top ', num2str(numScores), ' scores of first ', num2str(numPCs), ' PCs:']);
+% disp(corrMatrixTopScores);
+% 
+% % Visualize the correlation matrix as a heatmap
+% figure;
+% imagesc(corrMatrixTopScores); 
+% colorbar;
+% title(['Correlation Matrix of Top ', num2str(numScores), ' Questions for First ', num2str(numPCs), ' PCs']);
+% colormap; 
+% set(gca, 'XTick', 1:numPCs, 'YTick', 1:numPCs, ...
+%     'XTickLabels', arrayfun(@(x) ['PC', num2str(x)], 1:numPCs, 'UniformOutput', false), ...
+%     'YTickLabels', arrayfun(@(x) ['PC', num2str(x)], 1:numPCs, 'UniformOutput', false), ...
+%     'TickLabelInterpreter', 'none');
+% axis square; 
+% 
+% % Adjust the number of PCs based on the length of averageInFactorCorrelation
+% numPCs = length(averageInFactorCorrelation);  % This ensures the loop does not exceed the array bounds
+% 
+% % Graph
+% figure;
+% hold on; % Hold on to plot multiple data points on the same graph
+% 
+% % Plot settings
+% markers = {'s', '^'}; % Square and triangle markers
+% colors = {'b', 'r'}; % Blue for in-factor, red for out-factor
+% 
+% % Iterate only within the bounds of averageInFactorCorrelation
+% for i = 1:numPCs
+%     % Plot in-factor correlation coefficient with square marker
+%     plot(i, dataToPlot(1, i), markers{1}, 'MarkerEdgeColor', colors{1}, 'MarkerFaceColor', colors{1}, 'MarkerSize', 8);
+%     
+%     % Plot out-factor correlation coefficient with triangle marker
+%     plot(i, dataToPlot(2, i), markers{2}, 'MarkerEdgeColor', colors{2}, 'MarkerFaceColor', colors{2}, 'MarkerSize', 8);
+% end
+% 
+% % Customize the graph
+% set(gca, 'XTick', 1:numPCs, 'XTickLabel', arrayfun(@(x) ['PC', num2str(x)], 1:numPCs, 'UniformOutput', false));
+% ylabel('Average Correlation Coefficient');
+% title('In-Factor and Out-Factor Average Correlation Coefficients for PCs');
+% legend({'In-Factor', 'Out-Factor'}, 'Location', 'BestOutside');
+% axis square; 
+% hold off; 
+% 
+% 
+% % Customize the graph
+% set(gca, 'XTick', 1:numPCs, 'XTickLabel', arrayfun(@(x) ['PC', num2str(x)], 1:numPCs, 'UniformOutput', false));
+% ylabel('Average Correlation Coefficient');
+% title('In-Factor and Out-Factor Average Correlation Coefficients for PCs');
+% legend({'In-Factor', 'Out-Factor'}, 'Location', 'BestOutside');
+% axis square; 
+% hold off; 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% With-in Construct Correlation %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Assume 'score' is the matrix containing your PCA scores
+% % Extract the scores for the first 6 principal components
+% PCs = score(:, 1:6);
+% 
+% % Calculate the correlation matrix among these six principal components
+% corrMatrix = corr(PCs);
+% 
+% % Display the correlation matrix
+% disp('Correlation matrix among PC1, PC2, PC3, PC4, PC5, and PC6:');
+% disp(corrMatrix);
+% 
+% % Optionally, visualize the correlation matrix as a heatmap
+% figure;
+% imagesc(corrMatrix);
+% colorbar;
+% title('Correlation Matrix among PC1 to PC6');
+% xticks(1:6);
+% yticks(1:6);
+% xticklabels({'PC1','PC2','PC3','PC4','PC5','PC6'});
+% yticklabels({'PC1','PC2','PC3','PC4','PC5','PC6'});
+% axis square;
+
+
+
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%%%%%%%%%%%%%%%%%%%% Out-Of Construct Correlation %%%%%%%%%%%%%%%%%%%%%%
