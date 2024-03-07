@@ -1,0 +1,142 @@
+# Imports
+import os
+import sklearn as sk
+import numpy   as np
+import pandas  as pd
+import matplotlib.pyplot as plt
+
+from sklearn.decomposition import PCA, SparsePCA
+
+# Package functions
+from functions import *
+from plots     import *
+
+# Interactive plotting
+plt.ion()
+
+# Get subject response data
+sids_1, data_1 = import_data('round-1', round = 1)
+sids_2, data_2 = import_data('round-2', round = 2)
+
+# Chunk question data
+qs_1, ansbyq_1, qstats_1, qcdfs_1, qpdfs_1, inds_1 = get_qdata(data_1)
+qs_2, ansbyq_2, qstats_2, qcdfs_2, qpdfs_2, inds_2 = get_qdata(data_2)
+
+# Compare baseline and reduced questionnaire PCs
+keep = run_pca_comparison(ansbyq)
+
+# Plot answer means and standard deviations
+plot_means(qstats)
+plot_stds(qstats)
+
+# Plot PCA results 
+plot_pca_variance_explained( pca)
+plot_pca_cumulative_variance(pca)
+
+# Get abbreviated questions for plots
+short_qs = [' '.join(Q.split(' ')[0:10]) for Q in qs]
+
+# Plot top and bottom 40 most informative PDFs
+plot_response_dists(qpdfs, np.arange(0,40)   , 'Response PDFs (Top 40)', short_qs)
+plot_response_dists(qpdfs, np.arange(110,150), 'Response PDFs (Bottom 40)', short_qs)
+
+
+# Zero indexed!
+match_pairs = []
+for i in range(94): 
+    q2  = data_2.loc[data_2['sid'] == sids_2[0]]['Question'][i]
+    q1s = data_1.loc[data_1['sid'] == sids_1[0]]['Question']
+    match = np.where( q2 == q1s)[0][0]
+
+    match_pairs.append([i, match])
+
+    #print(' ')
+    #print(q2)
+    #print(q1s[match])
+    #print(str(i) + ' ' + str(match))
+    #input("Press Enter to continue...")
+
+match_pairs = np.array(match_pairs)
+match_inds  = match_pairs[:,1]
+
+assert [qs_1[i] for i in match_inds] == qs_2
+
+# Concatenate all subject data for shared questions for comparison
+ansbyq_3 = np.concatenate([ansbyq_1[match_inds,:],ansbyq_2],axis=1)
+
+from sklearn.decomposition import FactorAnalysis as FA
+from sklearn.decomposition import PCA, SparsePCA
+
+ncs = 10
+pca_1 = PCA(n_components = ncs)
+pca_1.fit(ansbyq_1.T)
+
+pca_2 = PCA(n_components = ncs)
+pca_2.fit(ansbyq_1[match_inds,:].T)
+
+pca_3 = PCA(n_components = ncs)
+pca_3.fit(ansbyq_2.T)Related: I asked Caesar yesterday if it would be easy for him to do something similar, and after we chatted about it a bit (and his travel plans) it seemed like it would be easy and fast for me to do it - so here's a comparison (inner product matrix) of 10 PCs from (1) the original data, with the loadings for only the validation questions extracted (2) the original data subsampled to the validation questions and then put through PCA (3) the PCs of the validation set. You can see the sub-sampling (i.e. validation question selection) preserved the top PCs pretty well in the original data, but maybe gave us back a few top PCs in the validation sample. (edited) 
+
+
+pca_4 = PCA(n_components = ncs); 
+pca_4.fit(ansbyq_3.T)
+
+cs = np.arange(0,ncs)
+allvecs = [pca_2.components_[cs,:], pca_3.components_[cs,:]]
+allvecs = np.concatenate(allvecs)
+ips = np.matmul(allvecs, allvecs.T)
+plt.matshow(ips, aspect = 'auto')
+
+allvecs = np.concatenate([pca_1.components_[cs,:][:,match_inds], pca_2.components_[cs,:]])
+ips = np.matmul(allvecs, allvecs.T)
+plt.matshow(ips,aspect='auto')
+
+allvecs = np.concatenate([pca_1.components_[cs,:][:,match_inds], -pca_3.components_[cs,:]])
+ips = np.matmul(allvecs, allvecs.T)
+plt.matshow(ips,aspect='auto')
+
+allvecs = np.concatenate([pca_1.components_[cs,:][:,match_inds], pca_2.components_[cs,:], pca_3.components_[cs,:]])
+ips = np.matmul(allvecs, allvecs.T)
+plt.matshow(ips,aspect='auto')
+
+allvecs = np.concatenate([pca_1.components_[cs,:][:,match_inds], pca_2.components_[cs,:], pca_3.components_[cs,:], pca_4.components_[cs,:]])
+ips = np.matmul(allvecs, allvecs.T)
+plt.matshow(ips,aspect='auto')
+
+
+
+from sklearn.decomposition import FastICA as ICA
+
+ncs = 10
+pca_1 = decomp(n_components = ncs)
+pca_1.fit(ansbyq_1[match_inds,:].T)
+
+pca_2 = decomp(n_components = ncs)
+pca_2.fit(ansbyq_2.T)
+
+cs = np.arange(0,ncs)
+allvecs = [pca_1.components_[cs,:], pca_2.components_[cs,:]]
+allvecs = np.concatenate(allvecs)
+#plt.matshow(corrs[0:10,:],aspect='auto')
+plt.matshow(corrs,aspect='auto')
+
+
+
+
+
+#for i in range(0,10):
+plt.figure()
+plt.plot(  pca_2.components_[i,:])
+plt.plot(- pca_3.components_[i,:])
+#plt.plot(  pca_4.components_[i,:])
+plt.title(f"PC {i:1d}")
+
+
+dem_2 = pd.read_csv('./data/round-2/demographic_information.csv')
+
+keep = []
+for i in range(0,94):
+    print(' ')
+    print(qs_2[i])
+    inp = input("Press Enter to continue...")
+    if inp == 'y': keep.append(qs_2[i]) 
