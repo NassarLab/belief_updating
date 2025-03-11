@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA, SparsePCA
 
-
-
 def import_data(dirstr, round):
     # Read subject data
     sids, data = read_response_data(dirstr)
@@ -16,7 +14,6 @@ def import_data(dirstr, round):
     sids, data = quality_check(sids, data, round)
 
     return sids, data
-
 
 def read_response_data(dirstr):
 
@@ -249,18 +246,19 @@ def sort_spca_components(spca, ansbyq, n_comp):
     return ve, spca
 
 
-def run_pca_comparison(ansbyq):
+def run_pca_subsample_analysis(ansbyq, ):
     # Get baseline PCA results
     pca = PCA()
     pca.fit(ansbyq.T)
 
     # PCs we would like to keep
-    pcs_to_keep = [1,2,5,6,8,9,15,26,37,39]
+    # pcs_to_keep = [1,2,5,6,8,9,15,26,37,39]
 
-    # PCs we will try to keep
+    # Try to keep top PCs using most loaded questions
     n_top_pcs = 10
     high_load_inds = np.zeros([n_top_pcs,150])
     for i in range(0,n_top_pcs):
+        # Check which questions have high loadings
         high_load_inds[i,:] = abs(pca.components_[i]) > np.percentile(abs(pca.components_[i]),90)
 
     keep = np.sum(high_load_inds, axis = 0) > 0
@@ -296,5 +294,6 @@ def run_pca_comparison(ansbyq):
     # # Comparision
     # corrs = np.corrcoef(np.concatenate([pca.components_[:,keep], -pcaB.components_]))
     # plt.matshow(corrs[pcs_to_keep,:],aspect='auto')
+
 
 
