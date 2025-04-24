@@ -23,7 +23,6 @@ def plot_response_dists(dfs, inds, title, short_qs):
 # Plot standard deviations
 def plot_stds(qstats):
     qnums = np.arange(0, qstats.shape[0])
-
     plt.figure(figsize = [4,4])
     plt.plot(qnums, qstats['std'].values, 'o')
     plt.title('Answer Standard Deviations')
@@ -35,7 +34,6 @@ def plot_stds(qstats):
 # Plot means
 def plot_means(qstats):
     qnums = np.arange(0, qstats.shape[0])
-    
     plt.figure(figsize = [4,4])
     plt.plot(qnums, qstats['mean'].values, 'o')
     plt.title('Answer Means')
@@ -63,24 +61,44 @@ def plot_pca_cumulative_variance(pca):
     plt.grid('on')
     plt.tight_layout()
 
+def plot_pca_components(pca, comps=[0,1]):
+    # Plot cumulative variance explained
+    plt.figure(figsize = [4,4])
+    plt.plot(pca.components_[comps,:].T,'-o')
+    plt.title('PCA Components')
+    plt.xlabel('Question')
+    plt.ylabel('Loading')
+    plt.grid('on')
+    plt.tight_layout()
 
-# def plot_response_dists(pca, pca50, pca100, ncomp):
-    
-#     # Get correlations
-#     corrs = np.corrcoef(np.concatenate([pca.components_[0:ncomp,0:50], pca100.components_[0:ncomp,0:50], pca50.components_[0:ncomp,0:50] ]))
+def plot_corrs(data):
+    corrs = np.corrcoef(data)
+    plt.matshow(corrs, aspect='auto')
+    plt.title('Answer Correlation Matrix')
+    plt.xlabel('Question')
+    plt.ylabel('Question')
+    plt.colorbar()
+    plt.tight_layout()
 
-#     # Plot response DFS
-#     fig, ax = plt.subplots(figsize = [6,6])
-#     cax = ax.matshow(corrs, aspect='auto')
+def plot_construct_domain_heatmap(heatmap):
+    """
+    Plots a heatmap on the excel grid. Heatmap should be on this grid already.
+    """
+    # Plot the data
+    plt.matshow(heatmap, aspect='auto')
+    plt.title('Construct-Domain Heatmap')
 
-#     plt.title('PC Correlations')
+    # Insert horizontal lines at every 4th row, vertical at every column
+    for i in range(1, 5):
+        plt.axhline(y=i*4-0.5, color='k', linewidth=2)
+        plt.axvline(x=i-0.5, color='k', linewidth=2)
 
-#     #ax.set_xticks([i for i in range(0,15)])
-#     #ax.set_xticklabels(['C' + str(i) + str(j) for i in range(0,3) for j in range(0,5)])
+    # Change x and y ticks
+    plt.xticks(np.arange(5), ['General', 'Social', 'Self', 'Policy', 'News'])
+    plt.yticks(np.arange(1.5, 20, 4), ['Detail', 'Incr.', 'Alt.', 'Info', 'Open'])
 
-#     #ax.set_yticks([i for i in range(0,15)])
-#     #ax.set_yticklabels(['C' + str(i) + str(j) for i in range(0,3) for j in range(0,5)])
-
-#     plt.tight_layout()
-
-#     return corrs
+    # Insert value into each cell
+    nrows, ncols = heatmap.shape
+    for i in range(nrows):
+        for j in range(ncols):
+            plt.text(j, i, str(round(heatmap[i,j], 2)), ha='center', va='center')
