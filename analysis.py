@@ -3,12 +3,17 @@ import pandas  as pd
 import sklearn as sk
 import matplotlib.pyplot as plt
 
-from sklearn.decomposition import PCA, SparsePCA
+from sklearn.decomposition import PCA, SparsePCA, FactorAnalysis
+from factor_analyzer import FactorAnalyzer
 
 
-def get_qdata(sids, data, sort = False):
+def get_qdata(sids, data, sort = False, trim=True, flip=True):
     """
     Takes the stacked subject data and extracts question information.
+
+    If sort is true, the questions are sorted by standard deviation.
+    If trim is true, attention checks are removed.
+    If flip is true, reverse coded questions are flipped.
 
     Returns:
     qs:      List of questions
@@ -20,15 +25,27 @@ def get_qdata(sids, data, sort = False):
     """
     print('Getting question x answer data and related stats ...')
 
-    # Get the number of questions and subjects
+    # Get question numbers, potentially remove attention checks
     qnums = np.unique(data['original_index'])
+    if trim: qnums = qnums[~np.isin(qnums, [101, 102, 103, 104])]
+
+    # Number of subjects, questions 
     nsubj = len(np.unique(data.sid))
+    nqs   = len(qnums)
+
+    # Indices of reverse coded questions
+    reverse_coded = np.array([
+        1 ,3 , 5 ,6 , 11,12, 14,15, 18,20,
+        22,23, 27,28, 30,31, 35,36, 38,40,
+        41,44, 46,48, 51,52, 54,55, 57,59,
+        62,64, 67,68, 71,72, 75,76, 78,80,
+        83,84, 86,87, 90,92 ,94,96, 98,100]) -1
 
     # Question statistics, answer matrix, CDFs and PDFs
-    ansbyq = np.zeros([len(qnums), nsubj])
-    qstats = np.zeros([len(qnums), 5])
-    qcdfs  = np.zeros([len(qnums), 5])
-    qpdfs  = np.zeros([len(qnums), 5])
+    ansbyq = np.zeros([nqs, nsubj])
+    qstats = np.zeros([nqs, 5])
+    qcdfs  = np.zeros([nqs, 5])
+    qpdfs  = np.zeros([nqs, 5])
 
     # Initialize list of questions to reorder if sort is true.
     qs = []
@@ -63,7 +80,9 @@ def get_qdata(sids, data, sort = False):
             if len(sq_answers) > 1:
                 print('Warning: Subject ' + sid + ' has multiple answers for question ' + str(qn) + '.')
                 q_answers[j] = sq_answers.iloc[-1]
-            
+
+        # Check if we need to flip the answers
+        if flip and (i in reverse_coded): q_answers = 6 - q_answers            
 
         # Save row to return array
         ansbyq[i, :] = q_answers
@@ -214,3 +233,46 @@ def run_pca_subsample_analysis(ansbyq, ):
     # # Comparision
     # corrs = np.corrcoef(np.concatenate([pca.components_[:,keep], -pcaB.components_]))
     # plt.matshow(corrs[pcs_to_keep,:],aspect='auto')
+
+
+def factor_analysis(zbyq, qs, qvar=None, rotation='oblimin', n_factors=3, method='principal', sklearn=False):
+    
+    df = pd.DataFrame(zbyq.T, columns=['Q' + str(i+1) for i in range(100)])
+
+    # Perform factor analysis
+    if sklearn:
+        fa = FactorAnalysis(n_components=n_factors, rotation=rotation)
+        fa.fit(df)
+        loadings = pd.DataFrame(fa.components_.T, columns=['factor' + str(i+1) for i in range(n_factors)])
+        print('Sklearn factor analysis does not support different methods.')
+    else:
+        fa = FactorAnalyzer(n_factors=n_factors, rotation=rotation, method=method)
+        fa.fit(df)
+        loadings = pd.DataFrame(fa.loadings_, columns=['factor' + str(i+1) for i in range(n_factors)])
+
+    # Save any additional fields
+    if qvar is not None:
+        loadings['variance'] = qvar
+    loadings['item'] = qs
+
+    return fa, loadings
+
+# Compute running variance in sliding scale over 10 questions for each participant
+def get_running_average_response_stats(sids, data):
+    window = np.ones(10)/10
+    running_avg = np.full((len(sids), len(qs)-10+1), np.nan)
+    running_std = np.full((len(sids), len(qs)-10+1), np.nan)
+    for i in range(len(sids)):
+        answers = data.loc[data['sid']==sids[i]]['answer_num'].values[0:100]
+        num_qs = len(answers)
+        if num_qs < 91:
+            print('Participant {} has {} questions'.format(sids[i], num_qs))
+            continue
+        try:
+            running_avg[i,:] = np.convolve(answers, window, mode='valid')
+            for j in range(len(qs)-10+1):
+                running_std[i,j] = np.std(answers[j:(j+10)])
+        except:
+            continue
+
+    return running_avg, running_std

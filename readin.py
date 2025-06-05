@@ -1,19 +1,6 @@
 import os
 import pandas as pd
-
-def import_data(dirstr, round = 3):
-    """
-    Wrapper for importing data then doing QCs. 
-    QCs aren't implemented for new data yet.
-    """
-    # Read subject data
-    sids, data = read_response_data(dirstr)
-    
-    # Get subject attention check performance
-    if round in [1,2]:
-        sids, data = quality_check(sids, data, round)
-
-    return sids, data
+import numpy as np
 
 def read_response_data(dirstr):
     """
@@ -23,34 +10,54 @@ def read_response_data(dirstr):
     files = sorted(os.listdir(dirstr))
     files = [file for file in files if file.startswith('p') and file.endswith('.csv')]
 
+    # Initialize drop counter
+    drop_cnt = 0
+
     # Manually marked as bad list
     #bad_list = list(pd.read_csv(dir + '/remove_list.csv', header=1))
-    bad_list = []
+    bad_list = [13619, 13624, 13570] #[13407]
+    drop_cnt += len(bad_list)
     snumlen = 5
+
+    expected_nq = 104
 
     # Read all the data
     sids, data = [], []
     print('Reading in data from ' + dirstr)
     for file in files:
+        
+        # Get subject number from filename
+        #sid = int(file[1:snumlen+1])
+        sid = int(file[5:snumlen+5])
 
         # Check if bad
-        if file[1:snumlen+1] in bad_list: continue
-
-        # Subject id from filename
-        sids.append(file[1:snumlen+1])
+        if sid in bad_list: continue
 
         # Data from file, append sid
         df = pd.read_csv(dirstr + file)
-        df['sid'] = sids[-1]
+        df['sid'] = sid
 
-        # The validation set (weirdly) has an extra NAN row.
-        df = df.dropna(subset=['Question'])
+        # Check that all subjects have same # of questions
+        nq = df.shape[0]
+        if nq != expected_nq:
+            print('Subject '+ str(sid) + ' has ' + str() + ' questions.')
 
-        # Insert basic check that all subjects have same # of questions
-        print('Subject '+ sids[-1] + ' has ' + str(df.shape[0]) + ' questions.')
+        # Check attention failures
+        failures = attention_failures(df)
+
+        # Notify
+        if failures > 0:
+            print('Subject ' + str(sid) + ' failed ' + str(failures) + ' attention checks, dropping.')
+            drop_cnt +=1
+            continue
 
         # Save to list
+        sids.append(sid)
         data.append(df)
+
+    # Notify total # of dropped subjects
+    print('Dropped ' + str(drop_cnt) + ' of ' + str(len(files)) + ' subjects.')
+    print('Fraction remaining: ' + str((len(files) - drop_cnt)/len(files)))
 
     # Merge data into single frame
     data = pd.concat(data).reset_index(drop = True)
@@ -64,57 +71,22 @@ def read_response_data(dirstr):
     return sids, data
 
 
-def quality_check(sids, data, round):
+def attention_failures(df):
     """
     Quality controls for the old data, needs updating for the new.
     """
-    # Three check questions
-    cqn = [22,71,115] if round == 1 else [13,42,71]
-    check_1 = list(data.loc[data.quest_num == cqn[0],:].answer_num == 3)
-    check_2 = list(data.loc[data.quest_num == cqn[1],:].answer_num == 1)
-    check_3 = list(data.loc[data.quest_num == cqn[2],:].answer_num == 1)
+    # Attention check questions and answers
+    checks  = [15,35,55,75]
+    answers = [ 1, 1, 3, 4]
 
-    # Get run lengths for each subject
-    runlens, check_4 = [], []
-    for i, s in enumerate(sids):
+    # Verify that these are as expected
+    attn_qs = np.where(df['is_attention'])[0]
+    assert np.all(attn_qs == checks)
 
-        # Detect changes in answer
-        df = pd.DataFrame()
-        df['shifted'] = data[data.sid == s]['answer_num'].shift(1) != data[data.sid == s]['answer_num']
+    # Check if subject passed them
+    failures = 0
+    for i, check in enumerate(checks):
+        if df.iloc[check].answer_num != answers[i]:
+            failures += 1
 
-        # Cumulative sum of bools tells us which chunk (run) each answer falls in
-        df['chunk'] = df['shifted'].cumsum()
-
-        # Group them by run and count how many are in each run
-        runlens.append( df.groupby('chunk').size().tolist() )
-
-        # Check if any runs are longer than 10
-        check_4.append( any([l < 10 for l in runlens[i]]) )
-
-    # TODO: Add variance check back in?
-
-    # List of pass/fail for each subject
-    pass_check = []
-    for i in range(len(check_1)):
-        pass_check.append(check_1[i] and check_2[i] and check_3[i] and check_4[i])
-
-    # Failed subject list
-    failed = [sids[i] for i, val in enumerate(pass_check) if not val]
-
-    # Display who failed
-    if len(failed) == 0:
-        print('No subjects failed attention checks.')
-    else:
-        print('Subjects failing checks:')
-        print(failed)
-
-    # Remove subjects failing checks from data
-    for sid in failed:
-        inds = data.index[data.sid == sid].tolist()
-        data = data.drop(inds)
-        data = data.reset_index(drop = True)
-
-    # Remove subjects failing checks from sids list
-    sids = [sid for sid in sids if sid not in failed]
-
-    return sids, data
+    return failures
